@@ -212,11 +212,11 @@
 </div>
 
 <div class="controls">
-  <label>Scanner:</label>
+  <label>View:</label>
   <select id="filter-scanner">
-    <option value="ALL">All</option>
-    <option value="A">Scanner A</option>
-    <option value="B">Scanner B</option>
+    <option value="ALL">Both Scanners (A + B)</option>
+    <option value="A">Scanner A only</option>
+    <option value="B">Scanner B only</option>
   </select>
 
   <label>Symbol:</label>
@@ -244,7 +244,8 @@
   </select>
 
   <button onclick="loadTrades()">🔄 Refresh</button>
-  <button onclick="manualRun()">▶ Run Scanner Now</button>
+  <button id="btn-run" onclick="manualRun()">▶ Run Scanner Now</button>
+  <span id="run-msg" style="font-size:0.8rem;color:#1a7a3c;"></span>
 </div>
 
 <div class="stats">
@@ -388,9 +389,26 @@
   }
 
   function manualRun() {
+    const btn = document.getElementById("btn-run");
+    const msg = document.getElementById("run-msg");
+    btn.disabled = true;
+    btn.textContent = "⏳ Running...";
+    msg.textContent = "";
     fetch("/api/run")
       .then(r => r.json())
-      .then(() => { setTimeout(loadTrades, 2000); });
+      .then(data => {
+        msg.textContent = "✅ Scanner ran successfully!";
+        btn.textContent = "▶ Run Scanner Now";
+        btn.disabled = false;
+        setTimeout(() => { msg.textContent = ""; }, 4000);
+        setTimeout(loadTrades, 2000);
+      })
+      .catch(() => {
+        msg.textContent = "❌ Error running scanner.";
+        msg.style.color = "#c0392b";
+        btn.textContent = "▶ Run Scanner Now";
+        btn.disabled = false;
+      });
   }
 
   function checkAuthStatus() {
