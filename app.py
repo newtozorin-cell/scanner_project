@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, redirect
 from apscheduler.schedulers.background import BackgroundScheduler
 from scanner import run_all_scanners
 from trade_logger import load_trades
@@ -16,6 +16,13 @@ scheduler.start()
 @app.route("/")
 def dashboard():
     return render_template("dashboard.html")
+
+
+@app.route("/auth/callback")
+def auth_callback():
+    # Fyers redirects here with auth_code in query params
+    # We show a page that lets user copy the full URL
+    return render_template("auth_callback.html")
 
 
 @app.route("/api/trades")
@@ -42,11 +49,10 @@ def auth_token():
     body = request.get_json()
     pasted_url = body.get("url", "").strip()
 
-    # Extract auth_code from the pasted redirect URL
     auth_code = None
     if "auth_code=" in pasted_url:
-        for part in pasted_url.split("&"):
-            if part.startswith("auth_code=") or "auth_code=" in part:
+        for part in pasted_url.replace("?", "&").split("&"):
+            if "auth_code=" in part:
                 auth_code = part.split("auth_code=")[-1].split("&")[0]
                 break
 
