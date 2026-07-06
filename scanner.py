@@ -43,9 +43,12 @@ def run_scanner(scanner_name, config):
             print(f"[SKIP] No data for {symbol}")
             continue
 
+        print(f"[DEBUG] {scanner_name} {symbol} — {len(df)} candles, last candle: {df.index[-1]}, close: {df['Close'].iloc[-1]}")
+
         candle_time = df.index[-1]
 
         if already_logged(scanner_name, symbol, candle_time):
+            print(f"[SKIP] Already logged {scanner_name} {symbol} {candle_time}")
             continue
 
         fp, fm = params["fast"]
@@ -53,6 +56,7 @@ def run_scanner(scanner_name, config):
         use_adx = params["use_adx"]
 
         signal = detect_signal(df, fp, fm, sp, sm, use_adx=use_adx)
+        print(f"[DEBUG] {scanner_name} {symbol} signal: {signal}")
 
         if signal:
             trade = build_trade_record(scanner_name, symbol, signal, candle_time)
