@@ -38,7 +38,7 @@ def already_logged(scanner, symbol, candle_time):
 
 def run_scanner(scanner_name, config):
     for symbol, params in config.items():
-        df = fetch_ohlcv(symbol, interval="15m", period="5d")
+        df = fetch_ohlcv(symbol, interval="15", period_days=5)
         if df is None or df.empty:
             print(f"[SKIP] No data for {symbol}")
             continue
