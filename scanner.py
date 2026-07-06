@@ -61,15 +61,19 @@ def run_scanner(scanner_name, config):
             candle_time  = df.index[i]
 
             if already_logged(scanner_name, symbol, candle_time):
+                print(f"[SKIP] Already logged {scanner_name} {symbol} @ {candle_time}")
                 continue
 
             signal = detect_signal(candle_slice, fp, fm, sp, sm, use_adx=use_adx)
-            print(f"[DEBUG] {scanner_name} {symbol} @ {candle_time} signal: {signal}")
 
             if signal:
+                # Use actual candle close as entry price
+                signal["entry"] = round(float(df['Close'].iloc[i]), 2)
                 trade = build_trade_record(scanner_name, symbol, signal, candle_time)
                 save_trade(trade)
-                print(f"[{scanner_name}] {symbol} {signal['direction']} Grade:{signal['grade']} Score:{signal['score']} @ {signal['entry']}")
+                print(f"[{scanner_name}] {symbol} {signal['direction']} Grade:{signal['grade']} Score:{signal['score']} @ {signal['entry']} candle:{candle_time}")
+            else:
+                print(f"[NO SIGNAL] {scanner_name} {symbol} @ {candle_time}")
 
 
 def run_all_scanners():
