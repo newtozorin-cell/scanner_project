@@ -45,23 +45,31 @@ def run_scanner(scanner_name, config):
 
         print(f"[DEBUG] {scanner_name} {symbol} — {len(df)} candles, last candle: {df.index[-1]}, close: {df['Close'].iloc[-1]}")
 
-        candle_time = df.index[-1]
-
-        if already_logged(scanner_name, symbol, candle_time):
-            print(f"[SKIP] Already logged {scanner_name} {symbol} {candle_time}")
-            continue
-
         fp, fm = params["fast"]
         sp, sm = params["slow"]
         use_adx = params["use_adx"]
 
-        signal = detect_signal(df, fp, fm, sp, sm, use_adx=use_adx)
-        print(f"[DEBUG] {scanner_name} {symbol} signal: {signal}")
+        # Scan every candle from today to catch all signals
+        today = datetime.now(IST).date()
+        today_indices = [i for i, t in enumerate(df.index) if t.date() == today]
 
-        if signal:
-            trade = build_trade_record(scanner_name, symbol, signal, candle_time)
-            save_trade(trade)
-            print(f"[{scanner_name}] {symbol} {signal['direction']} Grade:{signal['grade']} Score:{signal['score']} @ {signal['entry']}")
+        for i in today_indices:
+            if i < max(sp, fp) * 3:
+                continue
+
+            candle_slice = df.iloc[:i+1]
+            candle_time  = df.index[i]
+
+            if already_logged(scanner_name, symbol, candle_time):
+                continue
+
+            signal = detect_signal(candle_slice, fp, fm, sp, sm, use_adx=use_adx)
+            print(f"[DEBUG] {scanner_name} {symbol} @ {candle_time} signal: {signal}")
+
+            if signal:
+                trade = build_trade_record(scanner_name, symbol, signal, candle_time)
+                save_trade(trade)
+                print(f"[{scanner_name}] {symbol} {signal['direction']} Grade:{signal['grade']} Score:{signal['score']} @ {signal['entry']}")
 
 
 def run_all_scanners():
