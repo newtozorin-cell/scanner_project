@@ -132,6 +132,8 @@
     .pnl-pos { color: #1a7a3c; font-weight: 700; }
     .pnl-neg { color: #c0392b; font-weight: 700; }
 
+    .exit-input { width: 80px; padding: 2px 4px; border: 1px solid #b0c4de; border-radius: 3px; text-align: center; font-size: 0.82rem; }
+
     .scanner-a { background: #e8f4e8; }
     .scanner-b { background: #e8eef8; }
 
@@ -309,7 +311,7 @@
 
   function outcomeClass(o) {
     if (!o || o === "OPEN") return "outcome-open";
-    if (o === "PROFIT" || o === "T1" || o === "T2") return "outcome-profit";
+    if (o === "PROFIT") return "outcome-profit";
     return "outcome-loss";
   }
 
@@ -330,7 +332,10 @@
       const rowClass = t.scanner === "A" ? "scanner-a" : "scanner-b";
       const dirClass = t.direction === "BUY" ? "buy" : "sell";
       const adxVal   = t.adx !== null && t.adx !== undefined ? t.adx : "—";
-      const exitVal  = t.exit || "—";
+      const exitVal  = t.exit !== null && t.exit !== undefined ? t.exit : "—";
+      const exitHtml = t.exit !== null && t.exit !== undefined
+        ? `<span>${t.exit}</span>`
+        : `<input type="number" step="0.05" class="exit-input" data-id="${t.id}" placeholder="Exit" />`;
       const pnlVal   = t.pnl !== null && t.pnl !== undefined ? "₹" + t.pnl : "—";
 
       html += `<tr class="${rowClass}">
@@ -348,7 +353,7 @@
         <td>${t.confidence}%</td>
         <td>${adxVal}</td>
         <td class="${outcomeClass(t.outcome)}">${t.outcome || "OPEN"}</td>
-        <td>${exitVal}</td>
+        <td>${exitHtml}</td>
         <td class="${pnlClass(t.pnl)}">${pnlVal}</td>
       </tr>`;
     });
@@ -528,6 +533,23 @@
   document.getElementById("filter-symbol").addEventListener("change",  applyFilters);
   document.getElementById("filter-grade").addEventListener("change",   applyFilters);
   document.getElementById("filter-dir").addEventListener("change",     applyFilters);
+
+  document.getElementById("trades-body").addEventListener("change", function(e) {
+    if (e.target.classList.contains("exit-input")) {
+      const id   = e.target.dataset.id;
+      const exit = parseFloat(e.target.value);
+      if (isNaN(exit)) return;
+      fetch("/api/trades/update", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({id, exit})
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "ok") loadTrades();
+      });
+    }
+  });
 
   loadTrades();
   checkAuthStatus();

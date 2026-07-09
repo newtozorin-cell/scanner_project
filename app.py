@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, render_template, request, redirect, send_file
 from apscheduler.schedulers.background import BackgroundScheduler
 from scanner import run_all_scanners
-from trade_logger import load_trades, export_backup, import_backup
+from trade_logger import load_trades, export_backup, import_backup, update_trade_exit
 from fyers_auth import generate_auth_url, exchange_auth_code, is_token_valid
 import pytz
 import os
@@ -106,6 +106,24 @@ def backup_load():
             os.remove(tmp_path)
 
     return jsonify({"status": "ok", "message": f"Restored {count} trades from backup."})
+
+
+@app.route("/api/trades/update", methods=["POST"])
+def api_update_trade():
+    """Update exit price for a trade, auto-calc P&L and outcome."""
+    body = request.get_json()
+    trade_id = body.get("id") if body else None
+    exit_price = body.get("exit") if body else None
+    if not trade_id or exit_price is None:
+        return jsonify({"status": "error", "message": "Missing id or exit"}), 400
+    try:
+        exit_price = float(exit_price)
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "message": "Exit must be a number"}), 400
+    updated = update_trade_exit(trade_id, exit_price)
+    if updated is None:
+        return jsonify({"status": "error", "message": "Trade not found"}), 404
+    return jsonify({"status": "ok", "trade": updated})
 
 
 if __name__ == "__main__":

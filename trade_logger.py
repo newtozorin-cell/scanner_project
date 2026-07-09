@@ -52,6 +52,23 @@ def save_trade(trade: dict):
         json.dump(trades, f, indent=2, default=str)
 
 
+def update_trade_exit(trade_id: str, exit_price: float) -> dict:
+    """Update exit price, calc P&L, and save. Returns updated trade or None."""
+    trades = load_trades()
+    for t in trades:
+        if t["id"] == trade_id:
+            t["exit"] = exit_price
+            if t["direction"] == "BUY":
+                pnl = round(exit_price - t["entry"], 2)
+            else:
+                pnl = round(t["entry"] - exit_price, 2)
+            t["pnl"] = pnl
+            t["outcome"] = "PROFIT" if pnl >= 0 else "LOSS"
+            replace_trades(trades)
+            return t
+    return None
+
+
 def build_trade_record(scanner, symbol, signal, candle_time):
     return {
         "id": f"{scanner}_{symbol}_{candle_time.strftime('%Y%m%d%H%M')}",
