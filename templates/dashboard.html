@@ -245,7 +245,11 @@
 
   <button onclick="loadTrades()">🔄 Refresh</button>
   <button id="btn-run" onclick="manualRun()">▶ Run Scanner Now</button>
+  <button onclick="saveBackup()">💾 Save Backup</button>
+  <input type="file" id="backup-file" accept=".json" style="display:none;" onchange="loadBackup(event)" />
+  <button onclick="document.getElementById('backup-file').click()">📂 Load Backup</button>
   <span id="run-msg" style="font-size:0.8rem;color:#1a7a3c;"></span>
+  <span id="backup-msg" style="font-size:0.8rem;color:#1a7a3c;"></span>
 </div>
 
 <div class="stats">
@@ -482,6 +486,42 @@
         checkAuthStatus();
       }
     });
+  }
+
+  function saveBackup() {
+    const msg = document.getElementById("backup-msg");
+    msg.style.color = "#1a7a3c";
+    msg.textContent = "Preparing backup...";
+    window.location.href = "/api/backup/save";
+    setTimeout(() => {
+      msg.textContent = "✅ Backup downloaded.";
+      setTimeout(() => { msg.textContent = ""; }, 4000);
+    }, 1500);
+  }
+
+  function loadBackup(event) {
+    const file = event.target.files[0];
+    const msg  = document.getElementById("backup-msg");
+    if (!file) return;
+    msg.style.color = "#1a7a3c";
+    msg.textContent = "Restoring backup...";
+    const formData = new FormData();
+    formData.append("file", file);
+    fetch("/api/backup/load", { method: "POST", body: formData })
+      .then(r => r.json())
+      .then(data => {
+        msg.textContent = data.message;
+        msg.style.color = data.status === "ok" ? "#1a7a3c" : "#c0392b";
+        if (data.status === "ok") {
+          setTimeout(loadTrades, 800);
+          setTimeout(() => { msg.textContent = ""; }, 5000);
+        }
+      })
+      .catch(() => {
+        msg.textContent = "❌ Error restoring backup.";
+        msg.style.color = "#c0392b";
+      })
+      .finally(() => { event.target.value = ""; });
   }
 
   document.getElementById("filter-scanner").addEventListener("change", applyFilters);

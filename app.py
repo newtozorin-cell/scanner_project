@@ -1,9 +1,10 @@
-from flask import Flask, jsonify, render_template, request, redirect
+from flask import Flask, jsonify, render_template, request, redirect, send_file
 from apscheduler.schedulers.background import BackgroundScheduler
 from scanner import run_all_scanners
-from trade_logger import load_trades
+from trade_logger import load_trades, export_backup, import_backup
 from fyers_auth import generate_auth_url, exchange_auth_code, is_token_valid
 import pytz
+import os
 
 app = Flask(__name__)
 IST = pytz.timezone("Asia/Kolkata")
@@ -69,6 +70,42 @@ def auth_token():
 def auth_status():
     valid = is_token_valid()
     return jsonify({"logged_in": valid})
+
+
+@app.route("/api/backup/save", methods=["GET"])
+def backup_save():
+    """Save current trades to a JSON backup file and send it as a download."""
+    backup_path = export_backup()
+    return send_file(
+        backup_path,
+        mimetype="application/json",
+        as_attachment=True,
+        download_name=os.path.basename(backup_path)
+    )
+
+
+@app.route("/api/backup/load", methods=["POST"])
+def backup_load():
+    """Restore trades from an uploaded backup JSON file."""
+    if "file" not in request.files:
+        return jsonify({"status": "error", "message": "No file uploaded."}), 400
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"status": "error", "message": "Empty filename."}), 400
+    if not f.filename.lower().endswith(".json"):
+        return jsonify({"status": "error", "message": "Please upload a .json backup file."}), 400
+
+    tmp_path = os.path.join(os.path.dirname(__file__), "_uploaded_backup.json")
+    f.save(tmp_path)
+    try:
+        count = import_backup(tmp_path)
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Invalid backup file: {e}"}), 400
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+    return jsonify({"status": "ok", "message": f"Restored {count} trades from backup."})
 
 
 if __name__ == "__main__":

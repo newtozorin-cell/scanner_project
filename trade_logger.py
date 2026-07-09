@@ -17,9 +17,37 @@ def load_trades():
             return []
 
 
+def replace_trades(trades: list):
+    """Overwrite the trades file with the provided list (used for backup restore)."""
+    with open(TRADES_FILE, "w") as f:
+        json.dump(trades, f, indent=2, default=str)
+
+
+def export_backup(backup_path: str = None) -> str:
+    """Save current trades to a JSON backup file. Returns the backup file path."""
+    if backup_path is None:
+        ts = datetime.now(IST).strftime("%Y%m%d_%H%M%S")
+        backup_path = os.path.join(os.path.dirname(__file__), f"trades_backup_{ts}.json")
+    trades = load_trades()
+    with open(backup_path, "w") as f:
+        json.dump(trades, f, indent=2, default=str)
+    return backup_path
+
+
+def import_backup(backup_path: str) -> int:
+    """Load trades from a backup JSON file and replace current trades. Returns count loaded."""
+    with open(backup_path, "r") as f:
+        trades = json.load(f)
+    if not isinstance(trades, list):
+        raise ValueError("Backup file must contain a JSON list of trades.")
+    replace_trades(trades)
+    return len(trades)
+
+
 def save_trade(trade: dict):
     trades = load_trades()
-    trades.append(trade)
+    # Insert at the top so latest trades appear first
+    trades.insert(0, trade)
     with open(TRADES_FILE, "w") as f:
         json.dump(trades, f, indent=2, default=str)
 

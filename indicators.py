@@ -125,10 +125,8 @@ def detect_signal(df, fast_period, fast_mult, slow_period, slow_mult, use_adx=Fa
         grade = "A+"
     elif score >= 70:
         grade = "A"
-    elif score >= 55:
-        grade = "B"
     else:
-        grade = "C"
+        return None  # Filter out Grade B and C trades
 
     # Confidence
     if score >= 85:
